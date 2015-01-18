@@ -830,12 +830,15 @@ text_convert_invalid (const gchar* text, gssize len, GIConv converter, const gch
 }
 
 gchar *
-text_invalid_encoding_to_utf8 (const gchar* text, gssize len, const gchar *from_encoding, gsize *len_out)
+text_fixup_invalid_utf8 (const gchar* text, gssize len, gsize *len_out)
 {
-	GIConv converter = g_iconv_open ("UTF-8", from_encoding);
-	gchar *result = text_convert_invalid (text, len, converter, unicode_fallback_string, len_out);
-	g_iconv_close (converter);
-	return result;
+	static GIConv utf8_fixup_converter = NULL;
+	if (utf8_fixup_converter == NULL)
+	{
+		utf8_fixup_converter = g_iconv_open ("UTF-8", "UTF-8");
+	}
+
+	return text_convert_invalid (text, len, utf8_fixup_converter, unicode_fallback_string, len_out);
 }
 
 void
@@ -855,7 +858,7 @@ PrintTextTimeStamp (session *sess, char *text, time_t timestamp)
 	}
 	else
 	{
-		text = text_invalid_encoding_to_utf8 (text, -1, "UTF-8", NULL);
+		text = text_fixup_invalid_utf8 (text, -1, NULL);
 	}
 
 	log_write (sess, text, timestamp);
